@@ -1,0 +1,167 @@
+<div class="charts-view-container" [class.dark-theme]="isDarkMode()">
+  <!-- Top Bar / Header -->
+  <header class="charts-header">
+    <div class="header-left">
+      <div class="header-title-wrap">
+        <div class="header-icon-box">
+          <svg lucideChartBar [size]="22"></svg>
+        </div>
+        <div>
+          <h1>Métricas & Gráficos</h1>
+          <p class="header-subtitle">
+            @if (isAdmin()) {
+              <span class="role-tag admin">Painel de Administrador</span>
+              <span>Visão completa de todos os fluxos e quadros</span>
+            } @else {
+              <span class="role-tag member">Painel de Membro</span>
+              <span>Visualizando métricas dos seus quadros autorizados</span>
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      @if (selectedBoardId()) {
+        <button class="btn-action-outline" (click)="goToBoard(selectedBoardId()!)" title="Abrir quadro Kanban">
+          <svg lucideKanban [size]="16"></svg>
+          <span>Abrir Quadro</span>
+        </button>
+      }
+      <button class="btn-refresh" (click)="refreshData()" [disabled]="isLoading()" title="Atualizar dados">
+        <svg lucideRefreshCw [size]="16" [class.spinning]="isLoading()"></svg>
+        <span>Atualizar</span>
+      </button>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Carregando métricas e relatórios...</p>
+    </div>
+  } @else if (boards().length === 0 && !isAdmin()) {
+    <div class="empty-access-container">
+      <div class="empty-icon-circle">
+        <svg lucideAlertCircle [size]="48"></svg>
+      </div>
+      <h2>Nenhum Quadro Kanban Atribuído</h2>
+      <p>Você ainda não foi adicionado a nenhum quadro pelo administrador da equipe.</p>
+      <p class="empty-sub">Assim que você for incluído em um quadro, seus gráficos e tarefas aparecerão aqui automaticamente.</p>
+    </div>
+  } @else {
+    <div class="charts-main-layout">
+      <!-- Left Panel: Kanbans selector & Tarefas por Coluna -->
+      <aside class="charts-sidebar-panel">
+        <!-- Card 1: Kanbans List -->
+        <div class="panel-card kanbans-card">
+          <div class="panel-card-header">
+            <div class="panel-title-with-icon">
+              <div class="icon-bubble-pink">
+                <svg lucideKanban [size]="18"></svg>
+              </div>
+              <h3>Kanbans</h3>
+            </div>
+            <span class="badge-pill">{{ boards().length }}</span>
+          </div>
+
+          <div class="kanbans-list">
+            @for (board of boards(); track board.id) {
+              <div 
+                class="kanban-item" 
+                [class.selected]="selectedBoardId() === board.id"
+                (click)="selectBoard(board.id)"
+                role="button"
+                tabindex="0">
+                <div class="kanban-item-top">
+                  <span class="status-dot dot-teal"></span>
+                  <span class="kanban-name">{{ board.name }}</span>
+                </div>
+                <div class="kanban-stats-row">
+                  <span class="stat-tag">
+                    <svg lucideListTodo [size]="13"></svg>
+                    <span>{{ getBoardCardCount(board.id) }} Total</span>
+                  </span>
+                  <span class="stat-tag">
+                    <svg lucideCalendar [size]="13"></svg>
+                    <span>0 Fixas</span>
+                  </span>
+                  <span class="stat-tag">
+                    <svg lucideCircleCheck [size]="13"></svg>
+                    <span>0 Arquiv.</span>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Card 2: Tarefas por Coluna -->
+        <div class="panel-card columns-card">
+          <div class="panel-card-header">
+            <h3 class="blue-title">Tarefas por Coluna</h3>
+          </div>
+
+          <div class="columns-stat-list">
+            @for (col of columnStats(); track col.id) {
+              <div class="column-stat-row">
+                <div class="column-label-wrap">
+                  <span class="color-indicator-line" [style.backgroundColor]="col.color"></span>
+                  <span class="column-name">{{ col.title }}</span>
+                </div>
+                <span class="column-count">{{ col.count }}</span>
+              </div>
+            } @empty {
+              <div class="empty-columns-msg">
+                Nenhuma coluna cadastrada neste quadro.
+              </div>
+            }
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Panel: 2x2 Grid of Charts -->
+      <section class="charts-content-grid">
+        <!-- Chart 1: Tarefas por Status -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-title">Tarefas por Status</h3>
+          </div>
+          <div class="chart-body">
+            <canvas #canvasStatus></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Tarefas por Responsáveis / Status -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-title">Tarefas por Responsáveis / Status</h3>
+          </div>
+          <div class="chart-body">
+            <canvas #canvasAssigneeStatus></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: Tarefas por Prioridade -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-title">Tarefas por Prioridade</h3>
+          </div>
+          <div class="chart-body chart-body-pie">
+            <canvas #canvasPriority></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Tarefas por Responsável / Prioridade -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-title">Tarefas por Responsável / Prioridade</h3>
+          </div>
+          <div class="chart-body">
+            <canvas #canvasAssigneePriority></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+</div>

@@ -1,0 +1,250 @@
+<div class="dashboard-layout">
+  <header class="topbar">
+    <div class="header-title-box">
+      <h1>Meus Quadros (Kanban)</h1>
+      @if (isAdmin()) {
+        <span class="admin-badge">Admin</span>
+      }
+    </div>
+    <button class="logout-btn" (click)="logout()">Sair</button>
+  </header>
+
+  <main class="content">
+    <div class="boards-header">
+      <h2>Área de Trabalho</h2>
+      @if (isAdmin()) {
+        <button class="create-btn" (click)="openCreateBoardModal()">
+          <svg lucidePlus [size]="16"></svg>
+          <span>Novo Quadro</span>
+        </button>
+      }
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading">Carregando seus quadros...</div>
+    } @else {
+      <div class="boards-grid">
+        @for (board of boards(); track board.id) {
+          <div class="board-card" (click)="openBoard(board.id)">
+            <div class="board-card-header">
+              <div class="board-title-group">
+                <span class="board-card-icon">
+                  @switch (board.icon) {
+                    @case ('folder') { <svg lucideFolder [size]="18"></svg> }
+                    @case ('kanban') { <svg lucideKanban [size]="18"></svg> }
+                    @case ('layout') { <svg lucideLayout [size]="18"></svg> }
+                    @case ('check-square') { <svg lucideSquareCheck [size]="18"></svg> }
+                    @case ('list-todo') { <svg lucideListTodo [size]="18"></svg> }
+                    @case ('briefcase') { <svg lucideBriefcase [size]="18"></svg> }
+                    @case ('shopping-cart') { <svg lucideShoppingCart [size]="18"></svg> }
+                    @case ('users') { <svg lucideUsers [size]="18"></svg> }
+                    @case ('star') { <svg lucideStar [size]="18"></svg> }
+                    @case ('zap') { <svg lucideZap [size]="18"></svg> }
+                    @case ('calendar') { <svg lucideCalendar [size]="18"></svg> }
+                    @case ('clock') { <svg lucideClock [size]="18"></svg> }
+                    @case ('cpu') { <svg lucideCpu [size]="18"></svg> }
+                    @case ('database') { <svg lucideDatabase [size]="18"></svg> }
+                    @case ('chart-bar') { <svg lucideChartBar [size]="18"></svg> }
+                    @case ('box') { <svg lucideBox [size]="18"></svg> }
+                    @case ('tag') { <svg lucideTag [size]="18"></svg> }
+                    @case ('bookmark') { <svg lucideBookmark [size]="18"></svg> }
+                    @case ('globe') { <svg lucideGlobe [size]="18"></svg> }
+                    @default { <svg lucideCode [size]="18"></svg> }
+                  }
+                </span>
+                <h3 [title]="board.name">{{ board.name }}</h3>
+              </div>
+            </div>
+
+            <p class="board-description">{{ board.description || 'Sem descrição' }}</p>
+
+            @if (isAdmin()) {
+              <div class="board-card-footer">
+                <div class="board-actions">
+                  <button class="action-btn members-btn" (click)="openMembersModal(board, $event)" title="Gerenciar acesso de membros">
+                    <svg lucideUsers [size]="14"></svg>
+                    <span>Membros</span>
+                  </button>
+                  <button class="action-btn" (click)="openEditBoardModal(board, $event)" title="Editar quadro">
+                    <svg lucidePencil [size]="14"></svg>
+                  </button>
+                  <button class="action-btn delete-btn" (click)="deleteBoard(board.id, $event)" title="Excluir quadro">
+                    <svg lucideTrash2 [size]="14"></svg>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <p>Você ainda não possui nenhum quadro disponível.</p>
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  <!-- Modal: Gerenciar Acesso de Usuários ao Quadro -->
+  @if (managingBoard()) {
+    <div class="modal-backdrop" (click)="closeMembersModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>Gerenciar Acesso ao Quadro</h2>
+            <span class="board-badge">{{ managingBoard()?.name }}</span>
+          </div>
+          <button class="close-btn" (click)="closeMembersModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-subtitle">Escolha quais membros da equipe têm permissão para acessar este quadro:</p>
+
+          @if (isSavingMembers()) {
+            <div class="loading-members">Carregando membros...</div>
+          } @else {
+            <div class="users-access-list">
+              @for (user of users(); track user.id) {
+                <div class="user-access-row" [class.is-owner]="isOwner(user.id)">
+                  <div class="user-info">
+                    <div class="user-avatar">
+                      {{ (user.name || user.email || 'U').substring(0, 1).toUpperCase() }}
+                    </div>
+                    <div class="user-details">
+                      <div class="name-row">
+                        <span class="name">{{ user.name || 'Sem nome' }}</span>
+                        @if (isOwner(user.id)) {
+                          <span class="owner-tag">Dono do Quadro</span>
+                        }
+                      </div>
+                      <span class="email">{{ user.email }}</span>
+                    </div>
+                  </div>
+
+                  <div class="user-action">
+                    @if (isOwner(user.id)) {
+                      <span class="perm-tag always-active">Acesso Total</span>
+                    } @else {
+                      <button 
+                        class="toggle-access-btn" 
+                        [class.active]="isMember(user.id)"
+                        (click)="toggleMember(user)">
+                        @if (isMember(user.id)) {
+                          <svg lucideCheck [size]="14"></svg>
+                          <span>Acesso Liberado</span>
+                        } @else {
+                          <svg lucidePlus [size]="14"></svg>
+                          <span>Permitir Acesso</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              } @empty {
+                <div class="empty-users">Nenhum usuário cadastrado no sistema.</div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="done-btn" (click)="closeMembersModal()">Concluído</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Criar ou Editar Quadro -->
+  @if (showBoardModal()) {
+    <div class="modal-backdrop" (click)="closeBoardModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>{{ editingBoard() ? 'Editar Quadro' : 'Novo Quadro Kanban' }}</h2>
+            <span class="board-badge">{{ editingBoard() ? 'Atualizar Dados' : 'Área de Trabalho' }}</span>
+          </div>
+          <button class="close-btn" (click)="closeBoardModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <form (ngSubmit)="saveBoard()">
+          <div class="modal-body form-body">
+            <div class="form-field">
+              <label for="boardName">Nome do Quadro *</label>
+              <input 
+                type="text" 
+                id="boardName" 
+                name="name" 
+                [(ngModel)]="boardForm.name" 
+                placeholder="Ex: PG MULTIPACK, Financeiro, Logística..."
+                required 
+                autofocus>
+            </div>
+
+            <div class="form-field">
+              <label for="boardDesc">Descrição (opcional)</label>
+              <textarea 
+                id="boardDesc" 
+                name="description" 
+                rows="3" 
+                [(ngModel)]="boardForm.description" 
+                placeholder="Adicione detalhes ou notas sobre este quadro..."></textarea>
+            </div>
+
+            <div class="form-field">
+              <label>Ícone do Quadro (exibido na barra lateral)</label>
+              <div class="icon-picker-grid">
+                @for (item of availableIcons; track item.id) {
+                  <button 
+                    type="button" 
+                    class="icon-choice-btn" 
+                    [class.selected]="boardForm.icon === item.id"
+                    (click)="selectIcon(item.id)"
+                    [title]="item.name">
+                    @switch (item.id) {
+                      @case ('folder') { <svg lucideFolder [size]="18"></svg> }
+                      @case ('kanban') { <svg lucideKanban [size]="18"></svg> }
+                      @case ('layout') { <svg lucideLayout [size]="18"></svg> }
+                      @case ('check-square') { <svg lucideSquareCheck [size]="18"></svg> }
+                      @case ('list-todo') { <svg lucideListTodo [size]="18"></svg> }
+                      @case ('briefcase') { <svg lucideBriefcase [size]="18"></svg> }
+                      @case ('shopping-cart') { <svg lucideShoppingCart [size]="18"></svg> }
+                      @case ('users') { <svg lucideUsers [size]="18"></svg> }
+                      @case ('star') { <svg lucideStar [size]="18"></svg> }
+                      @case ('zap') { <svg lucideZap [size]="18"></svg> }
+                      @case ('calendar') { <svg lucideCalendar [size]="18"></svg> }
+                      @case ('clock') { <svg lucideClock [size]="18"></svg> }
+                      @case ('cpu') { <svg lucideCpu [size]="18"></svg> }
+                      @case ('database') { <svg lucideDatabase [size]="18"></svg> }
+                      @case ('chart-bar') { <svg lucideChartBar [size]="18"></svg> }
+                      @case ('box') { <svg lucideBox [size]="18"></svg> }
+                      @case ('tag') { <svg lucideTag [size]="18"></svg> }
+                      @case ('bookmark') { <svg lucideBookmark [size]="18"></svg> }
+                      @case ('globe') { <svg lucideGlobe [size]="18"></svg> }
+                      @default { <svg lucideCode [size]="18"></svg> }
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer form-footer">
+            <button type="button" class="cancel-btn" (click)="closeBoardModal()">Cancelar</button>
+            <button type="submit" class="save-btn" [disabled]="!boardForm.name.trim()">
+              @if (editingBoard()) {
+                <svg lucideCheck [size]="15"></svg>
+                <span>Salvar Alterações</span>
+              } @else {
+                <svg lucidePlus [size]="15"></svg>
+                <span>Criar Quadro</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

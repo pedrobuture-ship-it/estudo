@@ -1,0 +1,61 @@
+<div class="login-container">
+  <div class="login-card">
+    <h2>{{ isRegistering ? 'Criar Conta' : 'Entrar' }}</h2>
+    
+    <form (ngSubmit)="onSubmit()" #authForm="ngForm">
+      @if (isRegistering) {
+        <div class="form-group">
+          <label for="name">Nome</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            [(ngModel)]="name" 
+            required 
+            placeholder="Seu nome completo"
+          >
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          [(ngModel)]="email" 
+          required 
+          placeholder="seu@email.com"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          required 
+          placeholder="********"
+        >
+      </div>
+
+      @if (errorMessage) {
+        <div class="error-message">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <button type="submit" [disabled]="!authForm.form.valid || isLoading">
+        {{ isLoading ? 'Aguarde...' : (isRegistering ? 'Cadastrar' : 'Entrar') }}
+      </button>
+    </form>
+
+    <div class="toggle-mode">
+      <button type="button" class="link-btn" (click)="toggleMode()">
+        {{ isRegistering ? 'Já tenho uma conta. Entrar' : 'Não tenho conta. Cadastrar' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,535 @@
+<div class="app-container">
+  <!-- Dark Blue Sidebar -->
+  <aside class="sidebar" [class.collapsed]="isSidebarCollapsed()">
+    <!-- Navigation Menu Header -->
+    <div 
+      class="menu-heading" 
+      (click)="toggleSidebar()" 
+      role="button" 
+      tabindex="0"
+      [title]="isSidebarCollapsed() ? 'Expandir menu lateral' : 'Recolher menu lateral'">
+      <svg lucideMenu [size]="18" class="header-icon"></svg>
+      @if (!isSidebarCollapsed()) {
+        <span class="menu-text">Menu</span>
+      }
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="sidebar-nav">
+      <button 
+        class="nav-item" 
+        [class.active]="isHomeActive()" 
+        (click)="navigateToHome()"
+        title="Home">
+        <svg lucideHome [size]="18" class="item-icon"></svg>
+        @if (!isSidebarCollapsed()) {
+          <span class="item-label">Home</span>
+        }
+      </button>
+
+      <!-- Gráficos Button -->
+      <button 
+        class="nav-item" 
+        [class.active]="isChartsActive()" 
+        (click)="navigateToCharts()"
+        title="Gráficos">
+        <svg lucideChartBar [size]="18" class="item-icon"></svg>
+        @if (!isSidebarCollapsed()) {
+          <span class="item-label">Gráficos</span>
+        }
+      </button>
+
+      <!-- Notifications Button -->
+      <button 
+        class="nav-item notif-nav-item" 
+        [class.has-notifications]="notificationCount() > 0"
+        (click)="toggleNotificationModal()"
+        [title]="notificationCount() > 0 ? (notificationCount() + ' tarefas atribuídas a você') : 'Notificações (nenhuma tarefa atribuída)'">
+        <span class="bell-icon-wrapper">
+          <svg lucideBell [size]="18" class="item-icon"></svg>
+          @if (notificationCount() > 0) {
+            <span class="badge-dot-alert">{{ notificationCount() }}</span>
+          }
+        </span>
+        @if (!isSidebarCollapsed()) {
+          <span class="item-label">Notificações</span>
+          @if (notificationCount() > 0) {
+            <span class="notif-count-pill">{{ notificationCount() }}</span>
+          }
+        }
+      </button>
+
+      <!-- Boards Section -->
+      <div class="section-divider">
+        @if (!isSidebarCollapsed()) {
+          <span class="section-title">Quadros</span>
+        }
+        @if (isAdmin()) {
+          <button class="add-board-btn" (click)="openCreateBoardModal()" title="Criar novo quadro">
+            <svg lucidePlus [size]="14"></svg>
+          </button>
+        }
+      </div>
+
+      <div class="boards-list">
+        @for (board of boards(); track board.id) {
+          <button 
+            class="nav-item board-item" 
+            [class.active]="activeBoardId() === board.id"
+            (click)="openBoard(board.id)"
+            [title]="board.name">
+            <span class="board-icon-wrapper">
+              @switch (board.icon) {
+                @case ('folder') { <svg lucideFolder [size]="16" class="code-icon"></svg> }
+                @case ('kanban') { <svg lucideKanban [size]="16" class="code-icon"></svg> }
+                @case ('layout') { <svg lucideLayout [size]="16" class="code-icon"></svg> }
+                @case ('check-square') { <svg lucideSquareCheck [size]="16" class="code-icon"></svg> }
+                @case ('list-todo') { <svg lucideListTodo [size]="16" class="code-icon"></svg> }
+                @case ('briefcase') { <svg lucideBriefcase [size]="16" class="code-icon"></svg> }
+                @case ('shopping-cart') { <svg lucideShoppingCart [size]="16" class="code-icon"></svg> }
+                @case ('users') { <svg lucideUsers [size]="16" class="code-icon"></svg> }
+                @case ('star') { <svg lucideStar [size]="16" class="code-icon"></svg> }
+                @case ('zap') { <svg lucideZap [size]="16" class="code-icon"></svg> }
+                @case ('calendar') { <svg lucideCalendar [size]="16" class="code-icon"></svg> }
+                @case ('clock') { <svg lucideClock [size]="16" class="code-icon"></svg> }
+                @case ('cpu') { <svg lucideCpu [size]="16" class="code-icon"></svg> }
+                @case ('database') { <svg lucideDatabase [size]="16" class="code-icon"></svg> }
+                @case ('chart-bar') { <svg lucideChartBar [size]="16" class="code-icon"></svg> }
+                @case ('box') { <svg lucideBox [size]="16" class="code-icon"></svg> }
+                @case ('tag') { <svg lucideTag [size]="16" class="code-icon"></svg> }
+                @case ('bookmark') { <svg lucideBookmark [size]="16" class="code-icon"></svg> }
+                @case ('globe') { <svg lucideGlobe [size]="16" class="code-icon"></svg> }
+                @default { <svg lucideCode [size]="16" class="code-icon"></svg> }
+              }
+            </span>
+            @if (!isSidebarCollapsed()) {
+              <span class="item-label">{{ board.name }}</span>
+            }
+          </button>
+        } @empty {
+          @if (!isSidebarCollapsed()) {
+            <div class="empty-boards">Nenhum quadro</div>
+          }
+        }
+      </div>
+    </nav>
+
+    <!-- Sidebar Footer: User Info & Logout -->
+    <div class="sidebar-footer">
+      <div class="user-profile" [title]="currentUser()?.email ? currentUser()?.email + ' (' + (isAdmin() ? 'Admin' : 'Membro') + ')' : ''">
+        <div class="avatar">
+          {{ (currentUser()?.email || 'U').substring(0, 1).toUpperCase() }}
+        </div>
+        @if (!isSidebarCollapsed()) {
+          <div class="user-meta">
+            <span class="user-email" [title]="currentUser()?.email">{{ currentUser()?.email }}</span>
+            <span class="user-role-badge" [class.admin]="isAdmin()">
+              {{ isAdmin() ? 'Admin' : 'Membro' }}
+            </span>
+          </div>
+        }
+      </div>
+      <div class="footer-actions">
+        <button 
+          class="notif-footer-btn" 
+          (click)="toggleNotificationModal()" 
+          [title]="notificationCount() > 0 ? (notificationCount() + ' tarefas atribuídas a você') : 'Sem notificações'">
+          <div class="footer-bell-wrapper">
+            <svg lucideBell [size]="18"></svg>
+            @if (notificationCount() > 0) {
+              <span class="footer-badge">{{ notificationCount() }}</span>
+            }
+          </div>
+        </button>
+        <button 
+          class="theme-toggle-btn" 
+          (click)="toggleTheme()" 
+          [title]="isDarkMode() ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'">
+          @if (isDarkMode()) {
+            <svg lucideSun [size]="18"></svg>
+          } @else {
+            <svg lucideMoon [size]="18"></svg>
+          }
+        </button>
+        <button class="logout-icon-btn" (click)="logout()" title="Sair do sistema">
+          <svg lucideLogOut [size]="18"></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Content View -->
+  <main class="main-content">
+    <router-outlet />
+  </main>
+
+  <!-- Modal: Criar Novo Quadro (Sidebar) -->
+  @if (showCreateModal()) {
+    <div class="modal-backdrop" (click)="closeCreateBoardModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>Novo Quadro Kanban</h2>
+            <span class="modal-subtitle-tag">Área de Trabalho</span>
+          </div>
+          <button class="close-btn" (click)="closeCreateBoardModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <form (ngSubmit)="submitCreateBoard()">
+          <div class="form-field">
+            <label for="sidebarBoardName">Nome do Quadro *</label>
+            <input 
+              type="text" 
+              id="sidebarBoardName" 
+              name="name" 
+              [(ngModel)]="newBoardForm.name" 
+              placeholder="Ex: Desenvolvimento, Marketing, Operações..."
+              required 
+              autofocus>
+          </div>
+
+          <div class="form-field">
+            <label>Ícone do Quadro (exibido na sidebar)</label>
+            <div class="icon-picker-grid">
+              @for (item of availableIcons; track item.id) {
+                <button 
+                  type="button" 
+                  class="icon-choice-btn" 
+                  [class.selected]="newBoardForm.icon === item.id"
+                  (click)="selectIcon(item.id)"
+                  [title]="item.name">
+                  @switch (item.id) {
+                    @case ('folder') { <svg lucideFolder [size]="18"></svg> }
+                    @case ('kanban') { <svg lucideKanban [size]="18"></svg> }
+                    @case ('layout') { <svg lucideLayout [size]="18"></svg> }
+                    @case ('check-square') { <svg lucideSquareCheck [size]="18"></svg> }
+                    @case ('list-todo') { <svg lucideListTodo [size]="18"></svg> }
+                    @case ('briefcase') { <svg lucideBriefcase [size]="18"></svg> }
+                    @case ('shopping-cart') { <svg lucideShoppingCart [size]="18"></svg> }
+                    @case ('users') { <svg lucideUsers [size]="18"></svg> }
+                    @case ('star') { <svg lucideStar [size]="18"></svg> }
+                    @case ('zap') { <svg lucideZap [size]="18"></svg> }
+                    @case ('calendar') { <svg lucideCalendar [size]="18"></svg> }
+                    @case ('clock') { <svg lucideClock [size]="18"></svg> }
+                    @case ('cpu') { <svg lucideCpu [size]="18"></svg> }
+                    @case ('database') { <svg lucideDatabase [size]="18"></svg> }
+                    @case ('chart-bar') { <svg lucideChartBar [size]="18"></svg> }
+                    @case ('box') { <svg lucideBox [size]="18"></svg> }
+                    @case ('tag') { <svg lucideTag [size]="18"></svg> }
+                    @case ('bookmark') { <svg lucideBookmark [size]="18"></svg> }
+                    @case ('globe') { <svg lucideGlobe [size]="18"></svg> }
+                    @default { <svg lucideCode [size]="18"></svg> }
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" (click)="closeCreateBoardModal()">Cancelar</button>
+            <button type="submit" class="save-btn" [disabled]="!newBoardForm.name.trim()">
+              <svg lucidePlus [size]="15"></svg>
+              <span>Criar Quadro</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Notificações de Cartões Atribuídos -->
+  @if (showNotificationModal()) {
+    <div class="modal-backdrop" (click)="closeNotificationModal()">
+      <div class="modal-card notification-modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="title-with-icon">
+              <svg lucideBell [size]="20" class="notif-modal-icon"></svg>
+              <h2>Minhas Notificações</h2>
+            </div>
+            <span class="modal-subtitle-tag">
+              {{ notificationCount() }} {{ notificationCount() === 1 ? 'tarefa atribuída' : 'tarefas atribuídas' }}
+            </span>
+          </div>
+          <button class="close-btn" (click)="closeNotificationModal()" title="Fechar">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <div class="modal-body notif-modal-body">
+          @if (isNotificationLoading()) {
+            <div class="notif-loading">Carregando suas tarefas atribuídas...</div>
+          } @else if (notifications().length === 0) {
+            <div class="notif-empty-state">
+              <div class="empty-icon-circle">
+                <svg lucideCircleCheck [size]="36"></svg>
+              </div>
+              <h3>Tudo em dia!</h3>
+              <p>Você não possui nenhum cartão atribuído no momento.</p>
+            </div>
+          } @else {
+            <div class="notif-cards-list">
+              @for (notif of notifications(); track notif.id) {
+                <div class="notif-card-item" (click)="openNotificationBoard(notif.board_id)">
+                  <div class="notif-card-main">
+                    <div class="notif-card-header">
+                      <span class="notif-card-title">{{ notif.title }}</span>
+                      <span class="priority-pill" [class]="'priority-' + notif.priority?.toLowerCase()">
+                        {{ notif.priority }}
+                      </span>
+                    </div>
+
+                    @if (notif.description) {
+                      <p class="notif-card-desc">{{ notif.description }}</p>
+                    }
+
+                    <div class="notif-card-meta">
+                      <span class="meta-pill board-pill" title="Quadro">
+                        <svg lucideLayout [size]="13"></svg>
+                        <span>{{ notif.board_name }}</span>
+                      </span>
+                      <span class="meta-pill col-pill" title="Coluna">
+                        <svg lucideKanban [size]="13"></svg>
+                        <span>{{ notif.column_title }}</span>
+                      </span>
+                      @if (notif.due_date) {
+                        <span class="meta-pill date-pill" title="Prazo">
+                          <svg lucideCalendar [size]="13"></svg>
+                          <span>{{ notif.due_date }}</span>
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="card-item-actions">
+                    <button class="dismiss-card-btn" (click)="dismissNotification(notif.id, $event)" title="Dispensar esta notificação">
+                      <svg lucideX [size]="15"></svg>
+                    </button>
+                    <button class="goto-board-btn" title="Ir para o quadro">
+                      <svg lucideExternalLink [size]="16"></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer notif-modal-footer">
+          <div class="footer-left-actions">
+            <button 
+              class="clear-notif-btn" 
+              (click)="clearAllNotifications()" 
+              [disabled]="notifications().length === 0" 
+              title="Limpar todas as notificações">
+              <svg lucideTrash [size]="14"></svg>
+              <span>Limpar Notificações</span>
+            </button>
+            <button 
+              class="refresh-notif-btn" 
+              (click)="refreshNotifications()" 
+              [disabled]="isNotificationLoading()" 
+              title="Atualizar notificações">
+              <svg lucideRefreshCw [size]="14"></svg>
+              <span>Atualizar</span>
+            </button>
+          </div>
+          <button class="done-btn" (click)="closeNotificationModal()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Barra de Navegação Inferior para Mobile (estilo da foto) -->
+  <nav class="mobile-bottom-nav" aria-label="Navegação inferior mobile">
+    <!-- 1. Home -->
+    <button 
+      class="mobile-nav-btn" 
+      [class.active]="isHomeActive()" 
+      (click)="navigateToHome()"
+      title="Página Inicial">
+      <svg lucideHome [size]="20" class="btn-icon"></svg>
+      <span class="btn-label">Home</span>
+    </button>
+
+    <!-- 2. Notificações ("not") -->
+    <button 
+      class="mobile-nav-btn notif-btn" 
+      [class.active]="showNotificationModal()" 
+      (click)="toggleNotificationModal()"
+      title="Notificações">
+      <div class="icon-wrapper">
+        <svg lucideBell [size]="20" class="btn-icon"></svg>
+        @if (notificationCount() > 0) {
+          <span class="mobile-notif-pill">{{ notificationCount() }}</span>
+        }
+      </div>
+      <span class="btn-label">Notif.</span>
+    </button>
+
+    <!-- 3. Gráficos -->
+    <button 
+      class="mobile-nav-btn" 
+      [class.active]="isChartsActive()" 
+      (click)="navigateToCharts()"
+      title="Gráficos">
+      <svg lucideChartBar [size]="20" class="btn-icon"></svg>
+      <span class="btn-label">Gráficos</span>
+    </button>
+
+    <!-- 4. Um Kanban -->
+    <button 
+      class="mobile-nav-btn" 
+      [class.active]="activeBoardId() !== null && activeBoardId() === primaryBoard()?.id" 
+      (click)="openPrimaryBoard()"
+      [title]="primaryBoard()?.name || 'Kanban'">
+      <div class="icon-wrapper">
+        @switch (primaryBoard()?.icon) {
+          @case ('folder') { <svg lucideFolder [size]="20" class="btn-icon"></svg> }
+          @case ('kanban') { <svg lucideKanban [size]="20" class="btn-icon"></svg> }
+          @case ('layout') { <svg lucideLayout [size]="20" class="btn-icon"></svg> }
+          @case ('check-square') { <svg lucideSquareCheck [size]="20" class="btn-icon"></svg> }
+          @case ('list-todo') { <svg lucideListTodo [size]="20" class="btn-icon"></svg> }
+          @case ('briefcase') { <svg lucideBriefcase [size]="20" class="btn-icon"></svg> }
+          @case ('shopping-cart') { <svg lucideShoppingCart [size]="20" class="btn-icon"></svg> }
+          @case ('users') { <svg lucideUsers [size]="20" class="btn-icon"></svg> }
+          @case ('star') { <svg lucideStar [size]="20" class="btn-icon"></svg> }
+          @case ('zap') { <svg lucideZap [size]="20" class="btn-icon"></svg> }
+          @case ('calendar') { <svg lucideCalendar [size]="20" class="btn-icon"></svg> }
+          @case ('clock') { <svg lucideClock [size]="20" class="btn-icon"></svg> }
+          @case ('cpu') { <svg lucideCpu [size]="20" class="btn-icon"></svg> }
+          @case ('database') { <svg lucideDatabase [size]="20" class="btn-icon"></svg> }
+          @case ('chart-bar') { <svg lucideChartBar [size]="20" class="btn-icon"></svg> }
+          @case ('box') { <svg lucideBox [size]="20" class="btn-icon"></svg> }
+          @case ('tag') { <svg lucideTag [size]="20" class="btn-icon"></svg> }
+          @case ('bookmark') { <svg lucideBookmark [size]="20" class="btn-icon"></svg> }
+          @case ('globe') { <svg lucideGlobe [size]="20" class="btn-icon"></svg> }
+          @default { <svg lucideKanban [size]="20" class="btn-icon"></svg> }
+        }
+      </div>
+      <span class="btn-label">{{ primaryBoard()?.name || 'Kanban' }}</span>
+    </button>
+
+    <!-- 5. Mais (Estilo da foto: botão verde destacado) -->
+    <button 
+      class="mobile-nav-btn more-pill-btn" 
+      [class.active]="showMoreModal()" 
+      (click)="toggleMoreModal()"
+      title="Mais opções e outros quadros">
+      <div class="more-pill-box">
+        <svg lucideEllipsis [size]="18" class="more-icon"></svg>
+        <span class="more-label">Mais</span>
+      </div>
+    </button>
+  </nav>
+
+  <!-- Modal / Bottom Sheet: Outros Quadros do Usuário -->
+  @if (showMoreModal()) {
+    <div class="more-modal-backdrop" (click)="closeMoreModal()">
+      <div class="more-bottom-sheet" (click)="$event.stopPropagation()">
+        <!-- Handle Bar superior -->
+        <div class="sheet-handle-bar"></div>
+
+        <div class="sheet-header">
+          <div class="sheet-title-wrap">
+            <svg lucideKanban [size]="18" class="sheet-title-icon"></svg>
+            <h3>Outros Quadros</h3>
+            @if (otherBoards().length > 0) {
+              <span class="sheet-badge">{{ otherBoards().length }}</span>
+            }
+          </div>
+          <button class="sheet-close-btn" (click)="closeMoreModal()" title="Fechar">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <div class="sheet-body">
+          @if (otherBoards().length > 0) {
+            <div class="other-boards-list">
+              @for (board of otherBoards(); track board.id) {
+                <button 
+                  class="other-board-item" 
+                  [class.active]="activeBoardId() === board.id"
+                  (click)="openOtherBoard(board.id)">
+                  <span class="board-icon-box">
+                    @switch (board.icon) {
+                      @case ('folder') { <svg lucideFolder [size]="18"></svg> }
+                      @case ('kanban') { <svg lucideKanban [size]="18"></svg> }
+                      @case ('layout') { <svg lucideLayout [size]="18"></svg> }
+                      @case ('check-square') { <svg lucideSquareCheck [size]="18"></svg> }
+                      @case ('list-todo') { <svg lucideListTodo [size]="18"></svg> }
+                      @case ('briefcase') { <svg lucideBriefcase [size]="18"></svg> }
+                      @case ('shopping-cart') { <svg lucideShoppingCart [size]="18"></svg> }
+                      @case ('users') { <svg lucideUsers [size]="18"></svg> }
+                      @case ('star') { <svg lucideStar [size]="18"></svg> }
+                      @case ('zap') { <svg lucideZap [size]="18"></svg> }
+                      @case ('calendar') { <svg lucideCalendar [size]="18"></svg> }
+                      @case ('clock') { <svg lucideClock [size]="18"></svg> }
+                      @case ('cpu') { <svg lucideCpu [size]="18"></svg> }
+                      @case ('database') { <svg lucideDatabase [size]="18"></svg> }
+                      @case ('chart-bar') { <svg lucideChartBar [size]="18"></svg> }
+                      @case ('box') { <svg lucideBox [size]="18"></svg> }
+                      @case ('tag') { <svg lucideTag [size]="18"></svg> }
+                      @case ('bookmark') { <svg lucideBookmark [size]="18"></svg> }
+                      @case ('globe') { <svg lucideGlobe [size]="18"></svg> }
+                      @default { <svg lucideCode [size]="18"></svg> }
+                    }
+                  </span>
+                  <span class="board-name">{{ board.name }}</span>
+                  <svg lucideExternalLink [size]="15" class="open-icon"></svg>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="no-other-boards">
+              <svg lucideKanban [size]="32" class="empty-kanban-icon"></svg>
+              <p>Nenhum outro quadro disponível.</p>
+              @if (isAdmin()) {
+                <span class="empty-tip">Crie novos quadros abaixo para exibi-los aqui.</span>
+              }
+            </div>
+          }
+
+          <!-- Ações extras para mobile (Criar Quadro, Usuário, Tema, Logout) -->
+          <div class="sheet-actions-section">
+            @if (isAdmin()) {
+              <button class="sheet-action-btn primary-action" (click)="openCreateBoardModalFromSheet()">
+                <svg lucidePlus [size]="17"></svg>
+                <span>Criar Novo Quadro</span>
+              </button>
+            }
+
+            <div class="sheet-user-info">
+              <div class="sheet-user-avatar">
+                {{ (currentUser()?.email || 'U').substring(0, 1).toUpperCase() }}
+              </div>
+              <div class="sheet-user-details">
+                <span class="email" [title]="currentUser()?.email">{{ currentUser()?.email }}</span>
+                <span class="role" [class.admin]="isAdmin()">{{ isAdmin() ? 'Administrador' : 'Membro' }}</span>
+              </div>
+            </div>
+
+            <div class="sheet-footer-buttons">
+              <button class="sheet-btn theme-btn" (click)="toggleTheme()" [title]="isDarkMode() ? 'Modo Claro' : 'Modo Escuro'">
+                @if (isDarkMode()) {
+                  <svg lucideSun [size]="16"></svg>
+                  <span>Modo Claro</span>
+                } @else {
+                  <svg lucideMoon [size]="16"></svg>
+                  <span>Modo Escuro</span>
+                }
+              </button>
+
+              <button class="sheet-btn logout-btn" (click)="logout()" title="Sair do sistema">
+                <svg lucideLogOut [size]="16"></svg>
+                <span>Sair</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

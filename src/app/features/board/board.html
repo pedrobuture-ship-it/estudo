@@ -1,0 +1,308 @@
+<div class="board-layout">
+  <header class="topbar">
+    <div class="left-actions">
+      <button class="back-btn" (click)="goBack()">
+        <svg lucideArrowLeft [size]="16"></svg>
+        <span>Voltar</span>
+      </button>
+      <h1>{{ board()?.name || 'Carregando...' }}</h1>
+    </div>
+    <div class="right-actions">
+      @if (isAdmin()) {
+        <button class="add-list-top-btn" (click)="openCreateListModal()">
+          <svg lucidePlus [size]="16"></svg>
+          <span>Nova Coluna</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <main class="board-content" cdkDropListGroup>
+    @if (isLoading()) {
+      <div class="loading">Carregando quadro...</div>
+    } @else {
+      <div class="lists-container">
+        @for (list of lists(); track list.id; let first = $first) {
+          <div class="list-wrapper">
+            <div class="column-box">
+              <!-- Column Header -->
+              <div class="column-header">
+                <h3 class="column-title" (dblclick)="isAdmin() && openEditListModal(list, $event)" [title]="isAdmin() ? 'Dois cliques para renomear' : ''">{{ list.title }}</h3>
+                <div class="column-actions">
+                  <!-- Apenas a primeira coluna pode adicionar cartões -->
+                  @if (first) {
+                    <button class="column-action-btn add-btn" (click)="openCreateCardModal(list)" title="Adicionar cartão">
+                      <svg lucidePlus [size]="15"></svg>
+                    </button>
+                  }
+                  @if (isAdmin()) {
+                    <button class="column-action-btn" (click)="openEditListModal(list, $event)" title="Renomear coluna">
+                      <svg lucidePencil [size]="13"></svg>
+                    </button>
+                    <button class="column-action-btn delete-btn" (click)="deleteList(list.id, $event)" title="Excluir coluna">
+                      <svg lucideTrash2 [size]="13"></svg>
+                    </button>
+                  }
+                </div>
+              </div>
+              
+              <!-- Cards List -->
+              <div class="cards-list-container"
+                   [id]="list.id.toString()"
+                   cdkDropList
+                   [cdkDropListData]="list.cards"
+                   (cdkDropListDropped)="dropCard($event)">
+                
+                @for (card of list.cards; track card.id) {
+                  <div class="kanban-card" 
+                       [ngClass]="getPriorityClass(card.priority)" 
+                       cdkDrag
+                       [cdkDragStartDelay]="dragStartDelay"
+                       (cdkDragStarted)="onCardDragStarted()">
+                    <div class="card-accent-bar"></div>
+                    
+                    <div class="card-body">
+                      <div class="card-top-row">
+                        <div class="card-title">{{ card.title }}</div>
+                        <div class="card-actions">
+                          <!-- Membros e Admin podem editar cartões -->
+                          <button class="card-action-btn" (click)="openEditCardModal(card, $event)" title="Editar">
+                            <svg lucidePencil [size]="13"></svg>
+                          </button>
+                          <!-- Apenas Admin pode excluir cartões -->
+                          @if (isAdmin()) {
+                            <button class="card-action-btn delete-btn" (click)="deleteCard(card.id, list, $event)" title="Excluir">
+                              <svg lucideTrash2 [size]="13"></svg>
+                            </button>
+                          }
+                        </div>
+                      </div>
+
+                      @if (card.description) {
+                        <div class="card-description">{{ card.description }}</div>
+                      }
+
+                      <div class="card-footer">
+                        <div class="priority-badge">
+                          <span class="badge-dot"></span>
+                          <span class="badge-text">{{ card.priority || 'Baixa' }}</span>
+                        </div>
+
+                        @if (card.assigned_to) {
+                          <div class="assigned-user-badge" title="Responsável">
+                            <svg lucideUser [size]="12" class="user-icon"></svg>
+                            <span class="user-name">{{ getUserName(card.assigned_to) }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Add New Column Card -->
+        @if (isAdmin()) {
+          <div class="list-wrapper new-column-wrapper">
+            <button class="new-column-btn" (click)="openCreateListModal()">
+              <svg lucidePlus [size]="16"></svg>
+              <span>Nova Coluna</span>
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  <!-- Modal: Criar ou Editar Coluna -->
+  @if (showColumnModal()) {
+    <div class="modal-backdrop" (click)="closeListModal()">
+      <div class="modal-card small-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>{{ editingList() ? 'Renomear Coluna' : 'Nova Coluna' }}</h2>
+            <span class="board-badge">{{ board()?.name }}</span>
+          </div>
+          <button class="close-btn" (click)="closeListModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <form (ngSubmit)="saveList()">
+          <div class="modal-body-form">
+            <div class="form-field">
+              <label for="columnTitleInput">Título da Coluna *</label>
+              <input 
+                type="text" 
+                id="columnTitleInput" 
+                name="title" 
+                [(ngModel)]="columnTitle" 
+                placeholder="Ex: A Fazer, Em Produção, Concluído..." 
+                required 
+                autofocus>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" (click)="closeListModal()">Cancelar</button>
+            <button type="submit" class="save-btn" [disabled]="!columnTitle.trim()">
+              @if (editingList()) {
+                <svg lucideCheck [size]="15"></svg>
+                <span>Salvar</span>
+              } @else {
+                <svg lucidePlus [size]="15"></svg>
+                <span>Criar Coluna</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Criar Novo Cartão -->
+  @if (showCreateCardModal()) {
+    <div class="modal-backdrop" (click)="closeCreateCardModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>Novo Cartão</h2>
+            <span class="board-badge">Coluna: {{ targetListForNewCard()?.title }}</span>
+          </div>
+          <button class="close-btn" (click)="closeCreateCardModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <form (ngSubmit)="saveNewCard()">
+          <div class="modal-body-form">
+            <div class="form-field">
+              <label for="newCardTitle">Título do Cartão / Pedido *</label>
+              <input 
+                type="text" 
+                id="newCardTitle" 
+                name="title" 
+                [(ngModel)]="newCardForm.title" 
+                placeholder="Ex: PG MULTIPACK - PEDIDOS..."
+                required 
+                autofocus>
+            </div>
+
+            <div class="form-field">
+              <label for="newCardDesc">Descrição / Detalhes (opcional)</label>
+              <textarea 
+                id="newCardDesc" 
+                name="description" 
+                rows="3" 
+                [(ngModel)]="newCardForm.description" 
+                placeholder="Detalhes adicionais sobre este item..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field half">
+                <label for="newCardPriority">Prioridade</label>
+                <select id="newCardPriority" name="priority" [(ngModel)]="newCardForm.priority">
+                  <option value="Baixa">Baixa</option>
+                  <option value="Média">Média</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente</option>
+                </select>
+              </div>
+
+              <div class="form-field half">
+                <label for="newCardAssigned">Responsável (membros do quadro)</label>
+                <select id="newCardAssigned" name="assigned_to" [(ngModel)]="newCardForm.assigned_to">
+                  <option value="">(Nenhum responsável)</option>
+                  @for (user of users(); track user.id) {
+                    <option [value]="user.id">{{ user.name || user.email }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="newCardDueDate">Data Limite (Prazo)</label>
+              <input type="date" id="newCardDueDate" name="due_date" [(ngModel)]="newCardForm.due_date">
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" (click)="closeCreateCardModal()">Cancelar</button>
+            <button type="submit" class="save-btn" [disabled]="!newCardForm.title.trim()">
+              <svg lucidePlus [size]="15"></svg>
+              <span>Criar Cartão</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Card Modal -->
+  @if (editingCard()) {
+    <div class="modal-backdrop" (click)="closeEditModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h2>Editar Cartão</h2>
+            <span class="board-badge">Alterar Dados</span>
+          </div>
+          <button class="close-btn" (click)="closeEditModal()">
+            <svg lucideX [size]="18"></svg>
+          </button>
+        </div>
+
+        <form (ngSubmit)="saveCardChanges()">
+          <div class="modal-body-form">
+            <div class="form-field">
+              <label for="editTitle">Título</label>
+              <input type="text" id="editTitle" name="title" [(ngModel)]="editForm.title" required>
+            </div>
+
+            <div class="form-field">
+              <label for="editDesc">Descrição / Subtítulo</label>
+              <textarea id="editDesc" name="description" rows="3" [(ngModel)]="editForm.description" placeholder="Detalhes do pedido ou tarefa..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field half">
+                <label for="editPriority">Prioridade</label>
+                <select id="editPriority" name="priority" [(ngModel)]="editForm.priority">
+                  <option value="Baixa">Baixa</option>
+                  <option value="Média">Média</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente</option>
+                </select>
+              </div>
+
+              <div class="form-field half">
+                <label for="editAssigned">Responsável (membros do quadro)</label>
+                <select id="editAssigned" name="assigned_to" [(ngModel)]="editForm.assigned_to">
+                  <option value="">(Nenhum responsável)</option>
+                  @for (user of users(); track user.id) {
+                    <option [value]="user.id">{{ user.name || user.email }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="editDueDate">Data Limite (Prazo)</label>
+              <input type="date" id="editDueDate" name="due_date" [(ngModel)]="editForm.due_date">
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" (click)="closeEditModal()">Cancelar</button>
+            <button type="submit" class="save-btn" [disabled]="!editForm.title.trim()">
+              <svg lucideCheck [size]="15"></svg>
+              <span>Salvar Alterações</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
